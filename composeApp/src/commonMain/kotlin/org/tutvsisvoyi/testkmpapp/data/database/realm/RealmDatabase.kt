@@ -2,6 +2,7 @@ package org.tutvsisvoyi.testkmpapp.data.database.realm
 
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
+import io.realm.kotlin.UpdatePolicy
 import io.realm.kotlin.ext.query
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,7 +19,8 @@ class RealmDatabase {
         val config = RealmConfiguration.Builder(
             schema = setOf(
                 RealmUser::class,
-                RealmTimeEntry::class
+                RealmTimeEntry::class,
+                RealmWorkspace::class,
             )
         ).name("tvs_realm.app").build()
 
@@ -35,7 +37,7 @@ class RealmDatabase {
                 defaultWorkspaceId = user.defaultWorkspaceId
                 timezone = user.timezone
                 imageUrl = user.imageUrl
-            })
+            }, updatePolicy = UpdatePolicy.ALL)
         }
     }
 
@@ -65,7 +67,7 @@ class RealmDatabase {
                     name = workspace.name
                     organizationId = workspace.organizationId
                     premium = workspace.premium
-                })
+                }, updatePolicy = UpdatePolicy.ALL)
             }
         }
     }
@@ -97,8 +99,25 @@ class RealmDatabase {
                         stopTime = timeEntry.stop?.toEpochMilliseconds()
                         duration = timeEntry.duration
                         tags = kotlinx.serialization.json.Json.encodeToString(timeEntry.tags)
-                    })
+                    }, updatePolicy = UpdatePolicy.ALL)
                 }
+            }
+        }
+    }
+
+    suspend fun saveTimeEntry(timeEntry: TimeEntry) {
+        realm.write {
+            timeEntry.id?.let { id ->
+                copyToRealm(RealmTimeEntry().apply {
+                    this.id = id
+                    description = timeEntry.description
+                    projectId = timeEntry.projectId
+                    workspaceId = timeEntry.workspaceId
+                    startTime = timeEntry.start.toEpochMilliseconds()
+                    stopTime = timeEntry.stop?.toEpochMilliseconds()
+                    duration = timeEntry.duration
+                    tags = kotlinx.serialization.json.Json.encodeToString(timeEntry.tags)
+                }, updatePolicy = UpdatePolicy.ALL)
             }
         }
     }

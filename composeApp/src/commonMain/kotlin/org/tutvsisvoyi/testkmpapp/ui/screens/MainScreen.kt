@@ -1,18 +1,38 @@
 package org.tutvsisvoyi.testkmpapp.ui.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import org.koin.compose.koinInject
+import org.tutvsisvoyi.testkmpapp.ui.screens.login.LoginScreen
+import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreen
+import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreenModel
+import org.tutvsisvoyi.testkmpapp.ui.screens.time_entries.TimeEntriesScreen
+import org.tutvsisvoyi.testkmpapp.ui.screens.time_entries.TimeEntriesScreenModel
 
 class MainScreen : Screen {
     @Composable
@@ -22,7 +42,7 @@ class MainScreen : Screen {
                 bottomBar = {
                     NavigationBar {
                         TabNavigationItem(TimerTab)
-                        TabNavigationItem(ProjectsTab)
+                        TabNavigationItem(ReportsTab)
                         TabNavigationItem(ProfileTab)
                     }
                 }
@@ -40,39 +60,48 @@ private fun RowScope.TabNavigationItem(tab: Tab) {
     NavigationBarItem(
         selected = tabNavigator.current == tab,
         onClick = { tabNavigator.current = tab },
-        icon = { Icon(tab.options.icon!!, contentDescription = tab.options.title) },
+        icon = {
+            tab.options.icon?.let { icon ->
+                Icon(painter = icon, contentDescription = tab.options.title)
+            }
+        },
         label = { Text(tab.options.title) }
     )
 }
 
-// Tabs
 object TimerTab : Tab {
     override val options: TabOptions
         @Composable
         get() = TabOptions(
             index = 0u,
             title = "Timer",
-            icon = null
+            icon = rememberVectorPainter(Icons.Default.Home)
         )
 
     @Composable
     override fun Content() {
-//        TimerScreen().Content()
+        val screenModel: TimeEntriesScreenModel = koinInject()
+        val state by screenModel.state.collectAsState()
+
+        TimeEntriesScreen(
+            state = state,
+            onAction = screenModel::handleAction
+        )
     }
 }
 
-object ProjectsTab : Tab {
+object ReportsTab : Tab {
     override val options: TabOptions
         @Composable
         get() = TabOptions(
             index = 1u,
-            title = "Projects",
-            icon = null
+            title = "Reports",
+            icon = rememberVectorPainter(Icons.Default.Check)
         )
 
     @Composable
     override fun Content() {
-//        ProjectsScreen().Content()
+        ReportsContentForTab()
     }
 }
 
@@ -82,11 +111,41 @@ object ProfileTab : Tab {
         get() = TabOptions(
             index = 2u,
             title = "Profile",
-            icon = null
+            icon = rememberVectorPainter(Icons.Default.Person)
         )
 
     @Composable
     override fun Content() {
-//        ProfileScreen().Content()
+        val navigator = LocalNavigator.currentOrThrow
+        val screenModel: ProfileScreenModel = koinInject()
+        val state by screenModel.state.collectAsState()
+
+        LaunchedEffect(state.isLoggingOut) {
+            if (state.isLoggingOut) {
+                navigator.replaceAll(LoginScreen())
+            }
+        }
+
+        ProfileScreen(
+            state = state,
+            onAction = screenModel::handleAction,
+            onLogOut = {
+                // Navigate to login from the main navigator context
+                navigator.replaceAll(LoginScreen())
+            }
+        )
+    }
+}
+
+@Composable
+fun ReportsContentForTab() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        Text(
+            "Reports - Coming Soon",
+            style = androidx.compose.material3.MaterialTheme.typography.headlineMedium
+        )
     }
 }

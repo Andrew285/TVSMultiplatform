@@ -36,6 +36,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
+            implementation(libs.androidx.material.icons.extended)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -46,8 +47,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.androidx.material.icons.extended)
             implementation(libs.androidx.material.icons.core)
+            implementation(libs.material.icons.core)
 
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.tab.navigator)
@@ -123,6 +124,9 @@ dependencies {
     implementation(libs.androidx.material3.common.android)
     implementation(libs.androidx.foundation.android)
     implementation(libs.androidx.compose.material.core)
+    implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.benchmark.macro)
+    implementation(libs.ui.android)
     debugImplementation(compose.uiTooling)
 }
 

@@ -81,7 +81,7 @@ private fun LoginContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Toggl Time Tracker") }
+                title = { Text("TVS Report Tracker") }
             )
         }
     ) { paddingValues ->
@@ -94,7 +94,7 @@ private fun LoginContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Welcome to Toggl",
+                text = "Welcome",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 32.dp)
             )

@@ -14,39 +14,59 @@ import com.russhwolf.settings.Settings
 import io.ktor.client.plugins.auth.providers.BasicAuthCredentials
 import org.tutvsisvoyi.testkmpapp.data.network.TogglApiClient
 
+//val networkModule = module {
+//    single {
+//        HttpClient {
+//            install(ContentNegotiation) {
+//                json(Json {
+//                    ignoreUnknownKeys = true
+//                    isLenient = true
+//                    encodeDefaults = true
+//                })
+//            }
+//
+////            install(Logging) {
+////                logger = Logger.DEFAULT
+////                level = LogLevel.ALL // This will help debug
+////            }
+//
+//            // Fix the auth configuration
+//            install(Auth) {
+//                basic {
+//                    credentials {
+//                        val settings: Settings = get()
+//                        val apiToken = settings.getStringOrNull("api_token")
+//                        if (apiToken != null) {
+//                            // Toggl uses token as username, "api_token" as password
+//                            BasicAuthCredentials(username = apiToken, password = "api_token")
+//                        } else {
+//                            null // Don't provide credentials if no token
+//                        }
+//                    }
+//                    sendWithoutRequest { true } // Send auth with every request
+//                }
+//            }
+//        }
+//    }
+//    single { TogglApiClient(get(), get()) }
+//}
+
 val networkModule = module {
-    single {
+    single<HttpClient> {
         HttpClient {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
                     isLenient = true
-                    encodeDefaults = true
                 })
-            }
-
-//            install(Logging) {
-//                logger = Logger.DEFAULT
-//                level = LogLevel.ALL // This will help debug
-//            }
-
-            // Fix the auth configuration
-            install(Auth) {
-                basic {
-                    credentials {
-                        val settings: Settings = get()
-                        val apiToken = settings.getStringOrNull("api_token")
-                        if (apiToken != null) {
-                            // Toggl uses token as username, "api_token" as password
-                            BasicAuthCredentials(username = apiToken, password = "api_token")
-                        } else {
-                            null // Don't provide credentials if no token
-                        }
-                    }
-                    sendWithoutRequest { true } // Send auth with every request
-                }
             }
         }
     }
-    single { TogglApiClient(get()) }
+
+    single {
+        TogglApiClient(
+            httpClient = get(),
+            settings = get()  // Inject Settings
+        )
+    }
 }

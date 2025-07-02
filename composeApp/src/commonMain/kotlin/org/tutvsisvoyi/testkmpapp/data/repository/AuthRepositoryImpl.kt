@@ -28,17 +28,20 @@ class AuthRepositoryImpl(
                         imageUrl = loginResponse.data.imageUrl
                     )
 
-                    // Store email/password for API calls (encrypted in production!)
+                    // Store credentials for API calls - In production, encrypt these!
                     settings.putString("user_email", email)
-                    settings.putString("user_password", password) // Encrypt this!
+                    settings.putString("user_password", password) // Encrypt this in production!
                     settings.putBoolean("logged_in", true)
+                    settings.putString("auth_method", "credentials") // Track auth method
 
                     // Save user to local database
                     realmDatabase.saveUser(user)
 
-                    Result.success(AuthResponse(user, "")) // No API token from email/password
+                    Result.success(AuthResponse(user, ""))
                 },
-                onFailure = { Result.failure(it) }
+                onFailure = { error ->
+                    Result.failure(Exception("Authentication failed: ${error.message}"))
+                }
             )
         } catch (e: Exception) {
             Result.failure(e)
@@ -58,9 +61,14 @@ class AuthRepositoryImpl(
                         imageUrl = response.imageUrl
                     )
 
-                    // Store API token
+                    // Store API token (more secure than email/password)
                     settings.putString("api_token", apiToken)
                     settings.putBoolean("logged_in", true)
+                    settings.putString("auth_method", "token") // Track auth method
+
+                    // Clear any stored email/password if switching to token auth
+                    settings.remove("user_email")
+                    settings.remove("user_password")
 
                     // Save user to local database
                     realmDatabase.saveUser(user)
@@ -76,7 +84,14 @@ class AuthRepositoryImpl(
 
     override suspend fun logout() {
         settings.remove("api_token")
-        // Clear local database if needed
+        settings.remove("user_email")
+        settings.remove("user_password")
+        settings.remove("auth_method")
+        settings.putBoolean("logged_in", false)
+
+        // Clear local database
+        // TODO uncomment
+//        realmDatabase.clearUser()
     }
 
     override suspend fun getCurrentUser(): User? {
@@ -84,15 +99,55 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun isLoggedIn(): Boolean {
-        return getApiToken() != null
+        val isLoggedInFlag = settings.getBoolean("logged_in", false)
+        if (!isLoggedInFlag) return false
+
+        // Check if we have valid credentials for either auth method
+        val authMethod = settings.getStringOrNull("auth_method")
+        return when (authMethod) {
+            "token" -> getApiToken() != null
+            "credentials" -> getStoredCredentials() != null
+            else -> false
+        }
     }
 
     override suspend fun getApiToken(): String? {
         return settings.getStringOrNull("api_token")
     }
 
-    private fun configureAuth(apiToken: String) {
-        // This would be handled in the HTTP client configuration
-        // See the DI module for proper implementation
+    private fun getStoredCredentials(): Pair<String, String>? {
+        val email = settings.getStringOrNull("user_email")
+        val password = settings.getStringOrNull("user_password")
+        return if (email != null && password != null) {
+            Pair(email, password)
+        } else null
+    }
+
+    // Helper method to get auth method for configuring HTTP client
+    fun getAuthMethod(): String? {
+        return settings.getStringOrNull("auth_method")
+    }
+
+    // Helper method to validate current authentication
+    suspend fun validateAuth(): Boolean {
+        return try {
+            when (getAuthMethod()) {
+                "token" -> {
+                    val token = getApiToken()
+                    if (token != null) {
+                        togglApiClient.loginWithToken(token).isSuccess
+                    } else false
+                }
+                "credentials" -> {
+                    val credentials = getStoredCredentials()
+                    if (credentials != null) {
+                        togglApiClient.loginWithCredentials(credentials.first, credentials.second).isSuccess
+                    } else false
+                }
+                else -> false
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 }

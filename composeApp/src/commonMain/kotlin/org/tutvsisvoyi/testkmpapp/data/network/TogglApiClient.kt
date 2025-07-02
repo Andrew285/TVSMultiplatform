@@ -1,5 +1,6 @@
 package org.tutvsisvoyi.testkmpapp.data.network
 
+import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.auth.Auth
@@ -20,12 +21,59 @@ import org.tutvsisvoyi.testkmpapp.data.network.model.TogglTimeEntryResponse
 import org.tutvsisvoyi.testkmpapp.data.network.model.TogglUserResponse
 import org.tutvsisvoyi.testkmpapp.data.network.model.TogglWorkspaceResponse
 
-class TogglApiClient(private val httpClient: HttpClient) {
+class TogglApiClient(
+    private val httpClient: HttpClient,
+    private val settings: Settings
+) {
     val baseUrl = "https://api.track.toggl.com/api/v9"
+
+    // Create authenticated client for API calls
+    private fun createAuthenticatedClient(): HttpClient {
+        val authMethod = settings.getStringOrNull("auth_method")
+
+        return HttpClient {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                })
+            }
+
+            install(Auth) {
+                basic {
+                    credentials {
+                        when (authMethod) {
+                            "token" -> {
+                                val apiToken = settings.getStringOrNull("api_token")
+                                if (apiToken != null) {
+                                    BasicAuthCredentials(username = apiToken, password = "api_token")
+                                } else {
+                                    throw Exception("No API token found")
+                                }
+                            }
+                            "credentials" -> {
+                                val email = settings.getStringOrNull("user_email")
+                                val password = settings.getStringOrNull("user_password")
+                                if (email != null && password != null) {
+                                    BasicAuthCredentials(username = email, password = password)
+                                } else {
+                                    throw Exception("No credentials found")
+                                }
+                            }
+                            else -> throw Exception("No authentication method configured")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     suspend fun getCurrentUser(): Result<TogglUserResponse> {
         return try {
-            val response: TogglUserResponse = httpClient.get("$baseUrl/me").body()
+            val client = createAuthenticatedClient()
+            val response: TogglUserResponse = client.get("$baseUrl/me").body()
+            client.close()
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -34,7 +82,9 @@ class TogglApiClient(private val httpClient: HttpClient) {
 
     suspend fun getWorkspaces(): Result<List<TogglWorkspaceResponse>> {
         return try {
-            val response: List<TogglWorkspaceResponse> = httpClient.get("$baseUrl/workspaces").body()
+            val client = createAuthenticatedClient()
+            val response: List<TogglWorkspaceResponse> = client.get("$baseUrl/workspaces").body()
+            client.close()
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -46,6 +96,8 @@ class TogglApiClient(private val httpClient: HttpClient) {
         endDate: String? = null
     ): Result<List<TogglTimeEntryResponse>> {
         return try {
+            val client = createAuthenticatedClient()
+
             val url = buildString {
                 append("$baseUrl/me/time_entries")
                 val params = mutableListOf<String>()
@@ -56,7 +108,8 @@ class TogglApiClient(private val httpClient: HttpClient) {
                 }
             }
 
-            val response: List<TogglTimeEntryResponse> = httpClient.get(url).body()
+            val response: List<TogglTimeEntryResponse> = client.get(url).body()
+            client.close()
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -65,7 +118,9 @@ class TogglApiClient(private val httpClient: HttpClient) {
 
     suspend fun getCurrentTimeEntry(): Result<TogglTimeEntryResponse?> {
         return try {
-            val response: TogglTimeEntryResponse? = httpClient.get("$baseUrl/me/time_entries/current").body()
+            val client = createAuthenticatedClient()
+            val response: TogglTimeEntryResponse? = client.get("$baseUrl/me/time_entries/current").body()
+            client.close()
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -81,24 +136,6 @@ class TogglApiClient(private val httpClient: HttpClient) {
                         isLenient = true
                     })
                 }
-            }
-
-            val response: SessionResponse = client.post("https://api.track.toggl.com/api/v9/me") {
-                contentType(ContentType.Application.Json)
-                setBody(LoginRequest(email, password))
-            }.body()
-
-            // After successful login, get the user's API token
-            val userResponse = response.data
-
-            // Create authenticated client to get API token
-            val authClient = HttpClient {
-                install(ContentNegotiation) {
-                    json(Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                    })
-                }
                 install(Auth) {
                     basic {
                         credentials {
@@ -108,14 +145,13 @@ class TogglApiClient(private val httpClient: HttpClient) {
                 }
             }
 
-            // Get user profile which includes API token info
-            val profileResponse: TogglUserResponse = authClient.get("https://api.track.toggl.com/api/v9/me").body()
+            // Use GET request to /me endpoint with basic auth
+            val response: TogglUserResponse = client.get("$baseUrl/me").body()
 
             client.close()
-            authClient.close()
 
             Result.success(LoginResponse(
-                data = profileResponse,
+                data = response,
                 apiToken = null // Toggl doesn't return API token in login response
             ))
 
@@ -142,12 +178,26 @@ class TogglApiClient(private val httpClient: HttpClient) {
                 }
             }
 
-            val response: TogglUserResponse = client.get("https://api.track.toggl.com/api/v9/me").body()
+            val response: TogglUserResponse = client.get("$baseUrl/me").body()
             client.close()
             Result.success(response)
 
         } catch (e: Exception) {
             Result.failure(Exception("Invalid API token: ${e.message}"))
+        }
+    }
+
+    // Helper method to check if we have valid authentication
+    fun hasValidAuth(): Boolean {
+        val authMethod = settings.getStringOrNull("auth_method")
+        return when (authMethod) {
+            "token" -> settings.getStringOrNull("api_token") != null
+            "credentials" -> {
+                val email = settings.getStringOrNull("user_email")
+                val password = settings.getStringOrNull("user_password")
+                email != null && password != null
+            }
+            else -> false
         }
     }
 
