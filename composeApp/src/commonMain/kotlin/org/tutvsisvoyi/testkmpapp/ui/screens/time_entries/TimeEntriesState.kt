@@ -1,9 +1,11 @@
 package org.tutvsisvoyi.testkmpapp.ui.screens.time_entries
 
+import org.tutvsisvoyi.testkmpapp.domain.model.Project
 import org.tutvsisvoyi.testkmpapp.domain.model.TimeEntry
 
 data class TimeEntriesState(
     val timeEntries: List<TimeEntry> = emptyList(),
+    val projects: List<Project> = emptyList(),
     val currentWorkspaceId: Long? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,

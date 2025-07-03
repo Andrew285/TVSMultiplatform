@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
@@ -23,8 +25,11 @@ import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.composables.icons.lucide.FolderSync
+import com.composables.icons.lucide.Lucide
 import kotlinx.datetime.*
 import org.koin.compose.koinInject
+import org.tutvsisvoyi.testkmpapp.domain.model.Project
 import org.tutvsisvoyi.testkmpapp.domain.model.TimeEntry
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -256,7 +261,10 @@ fun PullToRefreshBox(
 }
 
 @Composable
-private fun TimeEntriesList(timeEntries: List<TimeEntry>) {
+private fun TimeEntriesList(
+    timeEntries: List<TimeEntry>,
+    onTimeEntryClicked: (TimeEntry) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -275,7 +283,10 @@ private fun TimeEntriesList(timeEntries: List<TimeEntry>) {
             }
 
             items(entriesForDate) { timeEntry ->
-                TimeEntryItem(timeEntry = timeEntry)
+                TimeEntryItem(
+                    timeEntry = timeEntry,
+                    onTimeEntryClicked = onTimeEntryClicked
+                )
             }
         }
     }
@@ -302,11 +313,16 @@ private fun DateHeader(date: LocalDate) {
 }
 
 @Composable
-private fun TimeEntryItem(timeEntry: TimeEntry) {
+private fun TimeEntryItem(
+    timeEntry: TimeEntry,
+    onTimeEntryClicked: (TimeEntry) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle click - maybe navigate to edit screen */ },
+            .clickable {
+                onTimeEntryClicked(timeEntry)
+           },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -466,6 +482,9 @@ fun TimeEntriesScreen(
     state: TimeEntriesState,
     onAction: (TimeEntriesAction) -> Unit
 ) {
+    var showTimeTrackerDialog by remember { mutableStateOf(false) }
+    var selectedTimeEntry by remember { mutableStateOf<TimeEntry?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -491,7 +510,7 @@ fun TimeEntriesScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-//                        Icon(Icons.Default.Sync, contentDescription = "Sync")
+                        Icon(Lucide.FolderSync, contentDescription = "Sync")
                     }
                 }
 
@@ -506,7 +525,7 @@ fun TimeEntriesScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-//                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 }
             },
@@ -556,7 +575,9 @@ fun TimeEntriesScreen(
 
                 !state.hasWorkspace -> {
                     NoWorkspaceContent(
-                        onRetry = { onAction(TimeEntriesAction.LoadTimeEntries) }
+                        onRetry = {
+                            onAction(TimeEntriesAction.LoadTimeEntries)
+                        }
                     )
                 }
 
@@ -565,9 +586,57 @@ fun TimeEntriesScreen(
                 }
 
                 else -> {
-                    TimeEntriesList(timeEntries = state.timeEntries)
+                    TimeEntriesList(
+                        timeEntries = state.timeEntries,
+                        onTimeEntryClicked = { timeEntry ->
+                            selectedTimeEntry =  timeEntry
+                            showTimeTrackerDialog = true
+                        }
+                    )
                 }
             }
         }
+
+        if (showTimeTrackerDialog) {
+            BottomSlidingDialog(
+                timeEntry = selectedTimeEntry,
+                visible = showTimeTrackerDialog,
+                onDismissRequest = {
+                    showTimeTrackerDialog = false
+                },
+                projects = state.projects
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BottomSlidingDialog(
+    timeEntry: TimeEntry?,
+    projects: List<Project>?,
+    visible: Boolean,
+    onDismissRequest: () -> Unit
+) {
+    var selectedProject by remember { mutableStateOf<Project?>(null) }
+
+    if (visible && timeEntry != null) {
+        selectedProject = timeEntry.project
+
+        ModalBottomSheet(
+            shape = RoundedCornerShape(10.dp),
+            dragHandle = {},
+            onDismissRequest = onDismissRequest,
+            content = {
+                TimeTrackerContent(
+                    timeEntry,
+                    projects = projects,
+                    selectedProject = selectedProject,
+                    onProjectSelected = { project ->
+                        selectedProject = project
+                    }
+                )
+            }
+        )
     }
 }

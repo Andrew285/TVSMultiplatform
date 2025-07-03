@@ -4,12 +4,14 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.tutvsisvoyi.testkmpapp.domain.repository.ProjectRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.TimeEntryRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.WorkspaceRepository
 
 class TimeEntriesScreenModel(
     private val timeEntryRepository: TimeEntryRepository,
-    private val workspaceRepository: WorkspaceRepository
+    private val workspaceRepository: WorkspaceRepository,
+    private val projectsRepository: ProjectRepository
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(TimeEntriesState())
@@ -29,6 +31,7 @@ class TimeEntriesScreenModel(
             is TimeEntriesAction.SyncTimeEntries -> syncTimeEntries()
             is TimeEntriesAction.ClearError -> clearError()
             is TimeEntriesAction.SelectDateRange -> selectDateRange(action.startDate, action.endDate)
+            is TimeEntriesAction.LoadProjects -> loadProjects()
         }
     }
 
@@ -39,6 +42,7 @@ class TimeEntriesScreenModel(
             if (currentWorkspace != null) {
                 _state.value = _state.value.copy(currentWorkspaceId = currentWorkspace.id)
                 loadTimeEntries()
+                loadProjects()
             } else {
                 // Try to sync workspaces first
                 workspaceRepository.syncWorkspaces().fold(
@@ -125,6 +129,38 @@ class TimeEntriesScreenModel(
                 _state.value = _state.value.copy(
                     isRefreshing = false,
                     errorMessage = "Refresh failed: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun loadProjects() {
+        screenModelScope.launch {
+            _state.value = _state.value.copy(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            try {
+                projectsRepository.getUserProjects().fold(
+                    onSuccess = { response ->
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            errorMessage = null,
+                            projects = response
+                        )
+                    },
+                    onFailure = { error ->
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            errorMessage = "Loading projects failed: ${error.message}"
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    errorMessage = "Loading projects failed: ${e.message}"
                 )
             }
         }

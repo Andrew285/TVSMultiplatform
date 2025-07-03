@@ -5,5 +5,6 @@ sealed class TimeEntriesAction {
     object RefreshTimeEntries : TimeEntriesAction()
     object SyncTimeEntries : TimeEntriesAction()
     object ClearError : TimeEntriesAction()
+    object LoadProjects : TimeEntriesAction()
     data class SelectDateRange(val startDate: String?, val endDate: String?) : TimeEntriesAction()
 }

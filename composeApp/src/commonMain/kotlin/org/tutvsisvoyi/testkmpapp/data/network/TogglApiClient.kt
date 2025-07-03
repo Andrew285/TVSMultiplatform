@@ -8,18 +8,14 @@ import io.ktor.client.plugins.auth.providers.BasicAuthCredentials
 import io.ktor.client.plugins.auth.providers.basic
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import org.tutvsisvoyi.testkmpapp.data.network.model.LoginRequest
 import org.tutvsisvoyi.testkmpapp.data.network.model.LoginResponse
-import org.tutvsisvoyi.testkmpapp.data.network.model.SessionResponse
+import org.tutvsisvoyi.testkmpapp.data.network.model.TogglProjectResponse
 import org.tutvsisvoyi.testkmpapp.data.network.model.TogglTimeEntryResponse
 import org.tutvsisvoyi.testkmpapp.data.network.model.TogglUserResponse
 import org.tutvsisvoyi.testkmpapp.data.network.model.TogglWorkspaceResponse
+import org.tutvsisvoyi.testkmpapp.domain.model.Project
 
 class TogglApiClient(
     private val httpClient: HttpClient,
@@ -232,6 +228,19 @@ class TogglApiClient(
 
         } catch (e: Exception) {
             Result.failure(Exception("Failed to authenticate: ${e.message}"))
+        }
+    }
+
+    suspend fun getUserProjects(): Result<List<TogglProjectResponse>> {
+        return try {
+            val client = createAuthenticatedClient()
+
+            val url = "$baseUrl/me/projects"
+            val response: List<TogglProjectResponse> = client.get(url).body()
+            client.close()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to retrieve projects: ${e.message}"))
         }
     }
 }
