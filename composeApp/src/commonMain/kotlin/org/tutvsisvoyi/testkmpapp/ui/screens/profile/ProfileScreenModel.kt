@@ -50,19 +50,21 @@ class ProfileScreenModel(
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
 
             try {
-                val user = authRepository.getCurrentUser()
-                if (user != null) {
-                    _state.value = _state.value.copy(
-                        user = user,
-                        isLoading = false,
-                        timezone = user.timezone
-                    )
-                } else {
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        errorMessage = "User not found"
-                    )
-                }
+                authRepository.getCurrentUser().fold(
+                    onSuccess = { user ->
+                        _state.value = _state.value.copy(
+                            user = user,
+                            isLoading = false,
+                            timezone = user.timezone
+                        )
+                    },
+                    onFailure = {
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            errorMessage = "User not found"
+                        )
+                    }
+                )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,

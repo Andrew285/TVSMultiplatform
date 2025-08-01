@@ -10,7 +10,8 @@ val screenModelModule = module {
     factory { TimeEntriesScreenModel(
         timeEntryRepository = get(),
         workspaceRepository = get(),
-        projectsRepository = get()
+        projectsRepository = get(),
+        tagsRepository = get()
     )}
     factory {
         ProfileScreenModel(

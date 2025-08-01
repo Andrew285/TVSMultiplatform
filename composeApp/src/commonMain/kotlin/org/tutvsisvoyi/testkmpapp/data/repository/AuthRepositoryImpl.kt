@@ -2,7 +2,6 @@ package org.tutvsisvoyi.testkmpapp.data.repository
 
 import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
-import org.tutvsisvoyi.testkmpapp.data.database.realm.RealmDatabase
 import org.tutvsisvoyi.testkmpapp.data.network.TogglApiClient
 import org.tutvsisvoyi.testkmpapp.domain.model.AuthResponse
 import org.tutvsisvoyi.testkmpapp.domain.model.User
@@ -10,7 +9,7 @@ import org.tutvsisvoyi.testkmpapp.domain.repository.AuthRepository
 
 class AuthRepositoryImpl(
     private val togglApiClient: TogglApiClient,
-    private val realmDatabase: RealmDatabase,
+//    private val realmDatabase: RealmDatabase,
     private val settings: Settings,
     private val httpClient: HttpClient
 ) : AuthRepository {
@@ -35,7 +34,7 @@ class AuthRepositoryImpl(
                     settings.putString("auth_method", "credentials") // Track auth method
 
                     // Save user to local database
-                    realmDatabase.saveUser(user)
+//                    realmDatabase.saveUser(user)
 
                     Result.success(AuthResponse(user, ""))
                 },
@@ -71,7 +70,7 @@ class AuthRepositoryImpl(
                     settings.remove("user_password")
 
                     // Save user to local database
-                    realmDatabase.saveUser(user)
+//                    realmDatabase.saveUser(user)
 
                     Result.success(user)
                 },
@@ -94,8 +93,27 @@ class AuthRepositoryImpl(
 //        realmDatabase.clearUser()
     }
 
-    override suspend fun getCurrentUser(): User? {
-        return realmDatabase.getUser()
+    override suspend fun getCurrentUser(): Result<User> {
+        return try {
+            togglApiClient.getCurrentUser().fold(
+                onSuccess = { userRes ->
+                    val user = User(
+                        id = userRes.id,
+                        email = userRes.email,
+                        fullName = userRes.fullName,
+                        defaultWorkspaceId = userRes.defaultWorkspaceId,
+                        timezone = userRes.timezone,
+                        imageUrl = userRes.imageUrl
+                    )
+                    Result.success(user)
+                },
+                onFailure = { e ->
+                    Result.failure(e)
+                }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun isLoggedIn(): Boolean {

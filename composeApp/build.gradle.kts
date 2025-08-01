@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxSerialization)
-    alias(libs.plugins.realm.plugin)
+//    alias(libs.plugins.realm.plugin)
 }
 
 kotlin {
@@ -39,12 +39,13 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.kotlinx.datetime.v071)
 
             // Core libraries
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.androidx.material.icons.core)
-            implementation(libs.material.icons.core)
+//            implementation(libs.androidx.material.icons.core)
+//            implementation(libs.material.icons.core)
             implementation(libs.icons.lucide)
 
             // Navigation
@@ -69,7 +70,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.multiplatform.settings.no.arg)
             implementation(libs.multiplatform.settings.coroutines)
-            implementation(libs.mongodb.realm)
+//            implementation(libs.mongodb.realm)
             implementation(libs.kotlin.coroutines)
             implementation(libs.stately.common)
         }
@@ -78,7 +79,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
-            implementation(libs.androidx.material.icons.extended)
+//            implementation(libs.androidx.material.icons.extended)
         }
 
         iosMain.dependencies {
@@ -127,5 +128,11 @@ android {
 
 // Only keep debug dependencies here
 dependencies {
+    implementation(libs.androidx.compose.material.core)
+    implementation(libs.foundation.android)
+    implementation(libs.transport.runtime)
+    implementation(libs.places)
+    implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.work.runtime.ktx)
     debugImplementation(compose.uiTooling)
 }

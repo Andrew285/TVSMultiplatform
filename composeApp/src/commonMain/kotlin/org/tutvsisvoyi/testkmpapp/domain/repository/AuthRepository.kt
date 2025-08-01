@@ -7,7 +7,7 @@ interface AuthRepository {
     suspend fun loginWithToken(apiToken: String): Result<User>
     suspend fun loginWithCredentials(email: String, password: String): Result<AuthResponse>
     suspend fun logout()
-    suspend fun getCurrentUser(): User?
+    suspend fun getCurrentUser(): Result<User>
     suspend fun isLoggedIn(): Boolean
     suspend fun getApiToken(): String?
 }

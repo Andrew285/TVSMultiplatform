@@ -27,5 +27,5 @@ data class TogglTimeEntryResponse(
     val duration: Long,
 
     @SerialName("tags")
-    val tags: List<String> = emptyList()
+    val tags: List<String>? = emptyList(),
 )

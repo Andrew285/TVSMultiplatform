@@ -15,17 +15,19 @@ hotpreview = "0.2.0"
 iconsLucide = "1.0.0"
 junit = "4.13.2"
 koinCompose = "4.0.0"
-koinCoreVersion = "3.5.0"
-kotlin = "2.0.20"
+koinCoreVersion = "4.0.1"
+kotlin = "2.1.0"
+kotlinxDatetime = "0.7.1"
+kotlinxDatetimeVersion = "0.7.1"
 ktor = "3.0.1"
-date-time = "0.6.1"
+date-time = "0.7.1"
 ktorClientAuth = "2.3.7"
-materialIconsCore = "1.7.3"
-materialIconsExtended = "1.7.8"
+#materialIconsCore = "1.7.8"
+#materialIconsExtended = "1.7.8"
 multiplatformSettings = "1.2.0"
 voyager = "1.1.0-beta03"
 koinCore = "4.0.1"
-realm = "3.0.0"
+#realm = "3.1.0"
 coroutines = "1.9.0"
 statelyCommon = "2.0.5"
 material3Android = "1.3.2"
@@ -48,10 +50,10 @@ uiAndroidVersion = "1.8.3"
 foundationAndroidVersion = "1.8.3"
 uiToolingPreviewAndroid = "1.8.3"
 cameraCore = "1.4.2"
+places = "4.4.1"
+workRuntimeKtx = "2.10.2"
 
 [libraries]
-androidx-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "materialIconsExtended" }
-androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 hotpreview = { module = "de.drick.compose:hotpreview", version.ref = "hotpreview" }
 icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLucide" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koinCompose" }
@@ -67,9 +69,11 @@ androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayo
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
+kotlinx-datetime-v041 = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-datetime-v071 = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetimeVersion" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktorClientAuth" }
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktorClientAuth" }
-material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "materialIconsCore" }
+#material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "materialIconsCore" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettings" }
 multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatformSettings" }
 
@@ -88,7 +92,7 @@ ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "k
 
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "date-time" }
 
-mongodb-realm = { module = "io.realm.kotlin:library-base", version.ref = "realm" }
+#mongodb-realm = { module = "io.realm.kotlin:library-base", version.ref = "realm" }
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 stately-common = { module = "co.touchlab:stately-common", version.ref = "statelyCommon" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
@@ -109,6 +113,8 @@ ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref =
 foundation-android = { group = "androidx.compose.foundation", name = "foundation-android", version.ref = "foundationAndroidVersion" }
 androidx-ui-tooling-preview-android = { group = "androidx.compose.ui", name = "ui-tooling-preview-android", version.ref = "uiToolingPreviewAndroid" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
+places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -117,4 +123,4 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-realm-plugin = { id = "io.realm.kotlin", version.ref = "realm" }
+#realm-plugin = { id = "io.realm.kotlin", version.ref = "realm" }

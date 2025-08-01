@@ -1,8 +1,10 @@
 package org.tutvsisvoyi.testkmpapp.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.time.ExperimentalTime
 
-data class TimeEntry(
+data class TimeEntry @OptIn(ExperimentalTime::class) constructor(
     val id: Long? = null,
     val description: String? = null,
     val projectId: Long? = null,
@@ -13,11 +15,13 @@ data class TimeEntry(
     val tags: List<String> = emptyList(),
     val project: Project? = null
 ) {
+    @OptIn(ExperimentalTime::class)
     val isRunning: Boolean get() = stop == null && duration < 0
 
+    @OptIn(ExperimentalTime::class)
     fun getFormattedDuration(): String {
         val totalSeconds = if (isRunning) {
-            (kotlinx.datetime.Clock.System.now() - start).inWholeSeconds
+            (Clock.System.now() - start).inWholeSeconds
         } else {
             duration
         }
