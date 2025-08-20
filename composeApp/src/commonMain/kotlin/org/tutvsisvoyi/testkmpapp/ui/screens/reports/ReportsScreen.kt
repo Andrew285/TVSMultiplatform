@@ -256,6 +256,7 @@ private fun SummaryCard(
             Text(
                 value,
                 style = MaterialTheme.typography.headlineSmall,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -527,6 +528,14 @@ fun ReportsScreen(
         }
     }
 
+    // Clear email message after 5 seconds
+    LaunchedEffect(state.emailSendMessage) {
+        state.emailSendMessage?.let {
+            kotlinx.coroutines.delay(5000)
+            onAction(ReportsAction.ClearEmailMessage)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -541,6 +550,23 @@ fun ReportsScreen(
                 )
             },
             actions = {
+                // Send by Email button - only show if PDF is generated
+                if (state.hasPdfGenerated) {
+                    IconButton(
+                        onClick = { onAction(ReportsAction.ShowEmailDialog) },
+                        enabled = !state.isSendingEmail
+                    ) {
+                        if (state.isSendingEmail) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Lucide.Mail, contentDescription = "Send by Email")
+                        }
+                    }
+                }
+
                 // Generate PDF button
                 IconButton(
                     onClick = { onAction(ReportsAction.GeneratePdfReport) },
@@ -605,6 +631,44 @@ fun ReportsScreen(
                     )
                     TextButton(
                         onClick = { saveMessage = null }
+                    ) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
+
+        // Email send message
+        state.emailSendMessage?.let { message ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (state.isEmailSendSuccess) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    }
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = message,
+                        color = if (state.isEmailSendSuccess) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = { onAction(ReportsAction.ClearEmailMessage) }
                     ) {
                         Text("Dismiss")
                     }
@@ -805,10 +869,24 @@ fun ReportsScreen(
                 }
             }
         }
+
+        // Email PDF Dialog
+        EmailPdfDialog(
+            isVisible = state.showEmailDialog,
+            fileName = state.generatedFileName,
+            reportType = state.reportType,
+            startDate = state.startDate,
+            endDate = state.endDate,
+            isSending = state.isSendingEmail,
+            onDismiss = { onAction(ReportsAction.HideEmailDialog) },
+            onSend = { email, subject, body ->
+                onAction(ReportsAction.SendPdfByEmail(email, subject, body))
+            }
+        )
     }
 }
 
-private fun formatDateShort(dateString: String): String {
+fun formatDateShort(dateString: String): String {
     return try {
         val date = LocalDate.parse(dateString)
         "${date.month.name.take(3)} ${date.dayOfMonth}"

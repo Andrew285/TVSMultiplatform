@@ -14,17 +14,22 @@ data class ReportsState @OptIn(ExperimentalMaterial3Api::class) constructor(
     val isRefreshing: Boolean = false,
     val isSyncing: Boolean = false,
     val isGeneratingPdf: Boolean = false,
+    val isSendingEmail: Boolean = false,
     val errorMessage: String? = null,
     val startDate: String? = null,
     val endDate: String? = null,
     val reportType: ReportType = ReportType.DAILY,
     val chartData: ChartData = ChartData(),
     val generatedPdfBytes: ByteArray? = null,
-    val generatedFileName: String? = null
+    val generatedFileName: String? = null,
+    val showEmailDialog: Boolean = false,
+    val emailSendMessage: String? = null,
+    val isEmailSendSuccess: Boolean = false
 ) {
     val isError: Boolean get() = errorMessage != null
     val hasWorkspace: Boolean get() = currentWorkspaceId != null
     val hasData: Boolean get() = timeEntries.isNotEmpty()
+    val hasPdfGenerated: Boolean get() = generatedPdfBytes != null
 }
 
 enum class ReportType {

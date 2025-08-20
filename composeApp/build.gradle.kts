@@ -135,5 +135,6 @@ dependencies {
     implementation(libs.androidx.media3.common.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.foundation.foundation.android)
     debugImplementation(compose.uiTooling)
 }

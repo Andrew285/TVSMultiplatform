@@ -353,6 +353,131 @@ private fun generateTogglPdfReport() {
         _state.value = _state.value.copy(errorMessage = null)
     }
 
+    private fun showEmailDialog() {
+        _state.value = _state.value.copy(showEmailDialog = true)
+    }
+
+    private fun hideEmailDialog() {
+        _state.value = _state.value.copy(showEmailDialog = false)
+    }
+
+    private fun sendPdfByEmail(email: String, subject: String, body: String) {
+        screenModelScope.launch {
+            _state.value = _state.value.copy(isSendingEmail = true, emailSendMessage = null)
+
+            val pdfBytes = _state.value.generatedPdfBytes
+            val fileName = _state.value.generatedFileName
+
+            if (pdfBytes == null || fileName == null) {
+                _state.value = _state.value.copy(
+                    isSendingEmail = false,
+                    emailSendMessage = "No PDF available to send. Please generate a report first.",
+                    isEmailSendSuccess = false
+                )
+                return@launch
+            }
+
+            try {
+                // Call your email service here
+                val result = sendEmailWithAttachment(
+                    toEmail = email,
+                    subject = subject,
+                    body = body,
+                    attachmentBytes = pdfBytes,
+                    attachmentName = fileName,
+                    attachmentMimeType = "application/pdf"
+                )
+
+                result.fold(
+                    onSuccess = {
+                        _state.value = _state.value.copy(
+                            isSendingEmail = false,
+                            showEmailDialog = false,
+                            emailSendMessage = "Email sent successfully to $email",
+                            isEmailSendSuccess = true
+                        )
+                    },
+                    onFailure = { error ->
+                        _state.value = _state.value.copy(
+                            isSendingEmail = false,
+                            emailSendMessage = "Failed to send email: ${error.message}",
+                            isEmailSendSuccess = false
+                        )
+                    }
+                )
+
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isSendingEmail = false,
+                    emailSendMessage = "Error sending email: ${e.message}",
+                    isEmailSendSuccess = false
+                )
+            }
+        }
+    }
+
+    private fun clearEmailMessage() {
+        _state.value = _state.value.copy(emailSendMessage = null)
+    }
+
+    // Email service interface - you'll need to implement this based on your email provider
+// This could be using a REST API, SMTP, or a third-party service like SendGrid, etc.
+    private suspend fun sendEmailWithAttachment(
+        toEmail: String,
+        subject: String,
+        body: String,
+        attachmentBytes: ByteArray,
+        attachmentName: String,
+        attachmentMimeType: String
+    ): Result<Unit> {
+        return try {
+            // Example implementation using a hypothetical email service
+            // Replace this with your actual email service implementation
+
+            // Option 1: Using a REST API email service (e.g., SendGrid, Mailgun, etc.)
+            val emailRequest = EmailRequest(
+                to = toEmail,
+                subject = subject,
+                htmlContent = body.replace("\n", "<br>"),
+                textContent = body,
+                attachments = listOf(
+                    EmailAttachment(
+                        content = attachmentBytes.encodeToBase64(),
+                        filename = attachmentName,
+                        type = attachmentMimeType
+                    )
+                )
+            )
+
+            // TODO; add email implementation
+//            val response = togglApiClient.sendEmail(emailRequest) // You'll need to add this to your API clientval
+
+//            if (response.isSuccessful) {
+//                Result.success(Unit)
+//            } else {
+//                Result.failure(Exception("Email service error: ${response.errorBody?.string()}"))
+//            }
+            return Result.success(Unit)
+
+            // Option 2: Using Android Intent for email (if on Android platform)
+            // This would open the user's email app with the PDF attached
+            /*
+            if (Platform.isAndroid) {
+                sendEmailViaIntent(toEmail, subject, body, attachmentBytes, attachmentName)
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Email not supported on this platform"))
+            }
+            */
+
+            // Option 3: Using platform-specific email implementations
+            // You could create expect/actual functions for different platforms
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun handleAction(action: ReportsAction) {
         when (action) {
             is ReportsAction.LoadReports -> startReportsCollection()
@@ -366,6 +491,10 @@ private fun generateTogglPdfReport() {
             is ReportsAction.ShowDateRangePicker -> {
                 // Handle showing date range picker in UI
             }
+            is ReportsAction.ShowEmailDialog -> showEmailDialog()
+            is ReportsAction.HideEmailDialog -> hideEmailDialog()
+            is ReportsAction.SendPdfByEmail -> sendPdfByEmail(action.email, action.subject, action.body)
+            is ReportsAction.ClearEmailMessage -> clearEmailMessage()
         }
     }
 
@@ -373,4 +502,26 @@ private fun generateTogglPdfReport() {
         super.onDispose()
         reportsJob?.cancel()
     }
+}
+
+// Data classes for email service API
+data class EmailRequest(
+    val to: String,
+    val subject: String,
+    val htmlContent: String,
+    val textContent: String,
+    val attachments: List<EmailAttachment>
+)
+
+data class EmailAttachment(
+    val content: String, // Base64 encoded
+    val filename: String,
+    val type: String
+)
+
+// Extension function to encode ByteArray to Base64
+private fun ByteArray.encodeToBase64(): String {
+    // You'll need to implement this based on your platform
+    // For KMP, you might use kotlinx-serialization or platform-specific implementations
+    return "" // Placeholder - implement based on your Base64 encoding solution
 }

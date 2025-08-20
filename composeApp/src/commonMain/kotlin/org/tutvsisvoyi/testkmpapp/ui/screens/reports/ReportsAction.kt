@@ -10,4 +10,8 @@ sealed class ReportsAction {
     data class ChangeReportType(val reportType: ReportType) : ReportsAction()
     object GeneratePdfReport : ReportsAction()
     object ShowDateRangePicker : ReportsAction()
+    object ShowEmailDialog : ReportsAction()
+    object HideEmailDialog : ReportsAction()
+    data class SendPdfByEmail(val email: String, val subject: String, val body: String) : ReportsAction()
+    object ClearEmailMessage : ReportsAction()
 }
