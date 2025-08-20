@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,7 @@ import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.RefreshCw
 import kotlinx.datetime.*
 import kotlinx.datetime.LocalDate
+import org.tutvsisvoyi.testkmpapp.data.utils.CalendarUtils
 import org.tutvsisvoyi.testkmpapp.domain.model.Project
 import org.tutvsisvoyi.testkmpapp.domain.model.Tag
 import org.tutvsisvoyi.testkmpapp.domain.model.TimeEntry
@@ -361,6 +363,8 @@ fun TimeEntriesScreen(
 ) {
     var showTimeTrackerDialog by remember { mutableStateOf(false) }
     var selectedTimeEntry by remember { mutableStateOf<TimeEntry?>(null) }
+    var showTimeEntriesDateRangeDialog by remember { mutableStateOf(false) }
+    var selectedTimeEntriesDateRange by remember { mutableStateOf<SelectableDates?>(null) }
 
     Column(
         modifier = Modifier
@@ -445,6 +449,33 @@ fun TimeEntriesScreen(
             onRefresh = { onAction(TimeEntriesAction.RefreshTimeEntries) },
             modifier = Modifier
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(30.dp, 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                OutlinedButton(
+                    shape = RoundedCornerShape(10.dp),
+                    content = {
+                        Text("BASquare")
+                    },
+                    onClick = {
+
+                    }
+                )
+
+                OutlinedButton(
+                    shape = RoundedCornerShape(10.dp),
+                    content = {
+                        Text("Date")
+                    },
+                    onClick = {
+                        showTimeEntriesDateRangeDialog = true
+                    }
+                )
+            }
+
             when {
                 state.isLoading -> {
                     LoadingContent()
@@ -499,6 +530,83 @@ fun TimeEntriesScreen(
 
                 }
             )
+        }
+
+        if (showTimeEntriesDateRangeDialog) {
+            val dateRangePickerState = rememberDateRangePickerState(
+                selectableDates = object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                        return true
+                    }
+
+                    override fun isSelectableYear(year: Int): Boolean {
+                        val currentYear = CalendarUtils.today().year
+                        return year >= currentYear - 5 // Allow selection from 5 years ago
+                    }
+                }
+            )
+
+            BasicAlertDialog(
+                onDismissRequest = {
+                    showTimeEntriesDateRangeDialog = false
+                }
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column {
+                        DateRangePicker(
+                            state = dateRangePickerState,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Action buttons
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    showTimeEntriesDateRangeDialog = false
+                                }
+                            ) {
+                                Text("Cancel")
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Button(
+                                onClick = {
+                                    val startDate = dateRangePickerState.selectedStartDateMillis?.let {
+                                        CalendarUtils.millisToLocalDate(
+                                            it
+                                        )
+                                    }
+
+                                    val endDate = dateRangePickerState.selectedEndDateMillis?.let {
+                                        CalendarUtils.millisToLocalDate(
+                                            it
+                                        )
+                                    }
+
+                                    onAction(TimeEntriesAction.SelectDateRange(startDate.toString(), endDate.toString()))
+                                    showTimeEntriesDateRangeDialog = false
+                                }
+                            ) {
+                                Text("Confirm")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -3,11 +3,6 @@ package org.tutvsisvoyi.testkmpapp.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -27,6 +22,10 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.House
+import com.composables.icons.lucide.Lucide
+import com.composables.icons.lucide.PersonStanding
 import org.koin.compose.koinInject
 import org.tutvsisvoyi.testkmpapp.ui.screens.login.LoginScreen
 import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreen
@@ -75,7 +74,7 @@ object TimerTab : Tab {
         get() = TabOptions(
             index = 0u,
             title = "Timer",
-            icon = rememberVectorPainter(Icons.Default.Home)
+            icon = rememberVectorPainter(Lucide.House)
         )
 
     @Composable
@@ -96,7 +95,7 @@ object ReportsTab : Tab {
         get() = TabOptions(
             index = 1u,
             title = "Reports",
-            icon = rememberVectorPainter(Icons.Default.Check)
+            icon = rememberVectorPainter(Lucide.Check)
         )
 
     @Composable
@@ -111,7 +110,7 @@ object ProfileTab : Tab {
         get() = TabOptions(
             index = 2u,
             title = "Profile",
-            icon = rememberVectorPainter(Icons.Default.Person)
+            icon = rememberVectorPainter(Lucide.PersonStanding)
         )
 
     @Composable

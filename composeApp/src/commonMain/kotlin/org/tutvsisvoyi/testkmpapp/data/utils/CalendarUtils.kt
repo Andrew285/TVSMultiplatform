@@ -2,19 +2,42 @@ package org.tutvsisvoyi.testkmpapp.data.utils
 
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
+@OptIn(ExperimentalTime::class)
 object CalendarUtils {
     fun firstDayOfThisMonth(): LocalDate {
         val today = today()
         return LocalDate(today.year, today.month, 1)
     }
 
-    @OptIn(ExperimentalTime::class)
     fun today(): LocalDate {
         return Clock.System.todayIn(TimeZone.currentSystemDefault())
+    }
+
+    /**
+     * Converts milliseconds since epoch to LocalDate
+     * @param millis milliseconds since January 1, 1970, 00:00:00 GMT
+     * @return LocalDate in the system's default timezone
+     */
+    fun millisToLocalDate(millis: Long): LocalDate {
+        return Instant.fromEpochMilliseconds(millis)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .date
+    }
+
+    /**
+     * Converts LocalDate to milliseconds since epoch
+     * @param localDate the LocalDate to convert
+     * @return milliseconds since January 1, 1970, 00:00:00 GMT
+     */
+    fun localDateToMillis(localDate: LocalDate): Long {
+        return localDate.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
     }
 }
 

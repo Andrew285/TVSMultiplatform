@@ -1,5 +1,6 @@
 package org.tutvsisvoyi.testkmpapp.ui.screens.time_entries
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.Job
@@ -13,6 +14,7 @@ import org.tutvsisvoyi.testkmpapp.domain.repository.TagsRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.TimeEntryRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.WorkspaceRepository
 
+@OptIn(ExperimentalMaterial3Api::class)
 class TimeEntriesScreenModel(
     private val timeEntryRepository: TimeEntryRepository,
     private val workspaceRepository: WorkspaceRepository,
