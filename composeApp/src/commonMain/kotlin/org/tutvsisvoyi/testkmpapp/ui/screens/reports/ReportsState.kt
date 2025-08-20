@@ -18,7 +18,9 @@ data class ReportsState @OptIn(ExperimentalMaterial3Api::class) constructor(
     val startDate: String? = null,
     val endDate: String? = null,
     val reportType: ReportType = ReportType.DAILY,
-    val chartData: ChartData = ChartData()
+    val chartData: ChartData = ChartData(),
+    val generatedPdfBytes: ByteArray? = null,
+    val generatedFileName: String? = null
 ) {
     val isError: Boolean get() = errorMessage != null
     val hasWorkspace: Boolean get() = currentWorkspaceId != null

@@ -36,7 +36,7 @@ class TogglApiClient(
     val baseUrl = "https://api.track.toggl.com/api/v9"
 
     // FIXED: Create authenticated client with correct credentials
-    private fun createAuthenticatedClient(): HttpClient {
+    fun createAuthenticatedClient(): HttpClient {
         val authMethod = settings.getStringOrNull("auth_method")
 
         return HttpClient {

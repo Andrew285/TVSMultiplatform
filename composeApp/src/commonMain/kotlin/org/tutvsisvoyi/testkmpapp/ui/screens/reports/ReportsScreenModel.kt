@@ -1,5 +1,6 @@
 package org.tutvsisvoyi.testkmpapp.ui.screens.reports
 
+import TogglPdfExporter
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.ExperimentalTime
@@ -9,17 +10,21 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import org.tutvsisvoyi.testkmpapp.data.network.TogglApiClient
 import org.tutvsisvoyi.testkmpapp.data.utils.CalendarUtils
 import org.tutvsisvoyi.testkmpapp.domain.repository.ProjectRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.TimeEntryRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.WorkspaceRepository
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 class ReportsScreenModel(
     private val timeEntryRepository: TimeEntryRepository,
     private val workspaceRepository: WorkspaceRepository,
-    private val projectsRepository: ProjectRepository
+    private val projectsRepository: ProjectRepository,
+    private val togglApiClient: TogglApiClient,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(ReportsState())
@@ -28,6 +33,7 @@ class ReportsScreenModel(
     private var currentStartDate: String? = CalendarUtils.firstDayOfThisMonth().toString()
     private var currentEndDate: String? = CalendarUtils.today().toString()
     private var reportsJob: Job? = null
+    private val pdfExporter = TogglPdfExporter(togglApiClient)
 
     init {
         initializeScreen()
@@ -210,28 +216,120 @@ class ReportsScreenModel(
         }
     }
 
-    private fun generatePdfReport() {
-        screenModelScope.launch {
-            _state.value = _state.value.copy(isGeneratingPdf = true, errorMessage = null)
+//    private fun generatePdfReport() {
+//        screenModelScope.launch {
+//            _state.value = _state.value.copy(isGeneratingPdf = true, errorMessage = null)
+//
+//            try {
+//                // TODO: Implement PDF generation
+//                // This would involve creating a PDF with charts and data
+//                kotlinx.coroutines.delay(2000) // Simulate PDF generation
+//
+//                _state.value = _state.value.copy(
+//                    isGeneratingPdf = false,
+//                    errorMessage = null
+//                )
+//
+//                // Show success message or save file
+//                println("PDF report generated successfully!")
+//
+//            } catch (e: Exception) {
+//                _state.value = _state.value.copy(
+//                    isGeneratingPdf = false,
+//                    errorMessage = "Failed to generate PDF: ${e.message}"
+//                )
+//            }
+//        }
+//    }
+private fun generateTogglPdfReport() {
+    screenModelScope.launch {
+        _state.value = _state.value.copy(isGeneratingPdf = true, errorMessage = null)
 
-            try {
-                // TODO: Implement PDF generation
-                // This would involve creating a PDF with charts and data
-                kotlinx.coroutines.delay(2000) // Simulate PDF generation
+        val workspaceId = _state.value.currentWorkspaceId
+        if (workspaceId == null) {
+            _state.value = _state.value.copy(
+                isGeneratingPdf = false,
+                errorMessage = "No workspace selected"
+            )
+            return@launch
+        }
 
-                _state.value = _state.value.copy(
-                    isGeneratingPdf = false,
-                    errorMessage = null
-                )
+        try {
+            val result = when (_state.value.reportType) {
+                ReportType.DAILY, ReportType.CUSTOM -> {
+                    pdfExporter.exportDetailedReportPdf( // Use the working minimal version
+                        workspaceId = workspaceId,
+                        startDate = _state.value.startDate!!,
+                        endDate = _state.value.endDate!!
+                    )
+                }
+                ReportType.WEEKLY, ReportType.MONTHLY -> {
+                    pdfExporter.exportSummaryReportPdf(
+                        workspaceId = workspaceId,
+                        startDate = _state.value.startDate!!,
+                        endDate = _state.value.endDate!!,
+                        grouping = "projects"
+                    )
+                }
+            }
 
-                // Show success message or save file
-                println("PDF report generated successfully!")
+            result.fold(
+                onSuccess = { pdfBytes ->
+                    val fileName = generateFileName(_state.value.reportType, _state.value.startDate, _state.value.endDate)
 
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isGeneratingPdf = false,
-                    errorMessage = "Failed to generate PDF: ${e.message}"
-                )
+                    // Store PDF data in state instead of saving to file
+                    _state.value = _state.value.copy(
+                        isGeneratingPdf = false,
+                        generatedPdfBytes = pdfBytes,
+                        generatedFileName = fileName,
+                        errorMessage = null
+                    )
+
+                    println("PDF generated successfully: ${pdfBytes.size} bytes")
+                },
+                onFailure = { error ->
+                    _state.value = _state.value.copy(
+                        isGeneratingPdf = false,
+                        errorMessage = "Failed to generate PDF: ${error.message}"
+                    )
+                }
+            )
+
+        } catch (e: Exception) {
+            _state.value = _state.value.copy(
+                isGeneratingPdf = false,
+                errorMessage = "Failed to generate PDF: ${e.message}"
+            )
+        }
+    }
+}
+
+    private fun clearGeneratedPdf() {
+        _state.value = _state.value.copy(
+            generatedPdfBytes = null,
+            generatedFileName = null
+        )
+    }
+
+//    private suspend fun savePdfToFile(pdfBytes: ByteArray, fileName: String): String {
+//        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+//        file.writeBytes(pdfBytes)
+//        return file.absolutePath
+//    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun generateFileName(reportType: ReportType, startDate: String?, endDate: String?): String {
+        val currentDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val dateString = "${currentDate.year}${currentDate.monthNumber.toString().padStart(2, '0')}${currentDate.dayOfMonth.toString().padStart(2, '0')}"
+
+        return when (reportType) {
+            ReportType.DAILY -> "toggl_daily_report_$dateString.pdf"
+            ReportType.WEEKLY -> "toggl_weekly_report_$dateString.pdf"
+            ReportType.MONTHLY -> "toggl_monthly_report_$dateString.pdf"
+            ReportType.CUSTOM -> {
+                val start = startDate?.replace("-", "") ?: dateString
+                val end = endDate?.replace("-", "") ?: dateString
+                "toggl_custom_report_${start}_to_$end.pdf"
             }
         }
     }
@@ -263,7 +361,7 @@ class ReportsScreenModel(
             is ReportsAction.ClearError -> clearError()
             is ReportsAction.SelectDateRange -> selectDateRange(action.startDate, action.endDate)
             is ReportsAction.ChangeReportType -> changeReportType(action.reportType)
-            is ReportsAction.GeneratePdfReport -> generatePdfReport()
+            is ReportsAction.GeneratePdfReport -> generateTogglPdfReport()
             is ReportsAction.LoadProjects -> loadProjects()
             is ReportsAction.ShowDateRangePicker -> {
                 // Handle showing date range picker in UI

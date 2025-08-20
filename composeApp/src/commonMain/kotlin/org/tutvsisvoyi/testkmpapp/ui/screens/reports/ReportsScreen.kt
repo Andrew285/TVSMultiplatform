@@ -92,7 +92,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composables.icons.lucide.*
+import io.ktor.http.ContentDisposition
 import kotlinx.datetime.LocalDate
+import org.tutvsisvoyi.testkmpapp.data.network.savePdfToDownloads
 import org.tutvsisvoyi.testkmpapp.data.utils.CalendarUtils
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -488,6 +490,42 @@ fun ReportsScreen(
     onAction: (ReportsAction) -> Unit
 ) {
     var showDateRangeDialog by remember { mutableStateOf(false) }
+    var saveMessage by remember { mutableStateOf<String?>(null) }
+    var isSuccess by remember { mutableStateOf(false) }
+
+    // Handle PDF saving when bytes become available
+    LaunchedEffect(state.generatedPdfBytes) {
+        state.generatedPdfBytes?.let { pdfBytes ->
+            state.generatedFileName?.let { fileName ->
+                try {
+                    val result = savePdfToDownloads(pdfBytes, fileName)
+                    result.fold(
+                        onSuccess = { filePath ->
+                            saveMessage = "PDF saved successfully to: $filePath"
+                            isSuccess = true
+                            println("PDF saved: $filePath")
+                        },
+                        onFailure = { error ->
+                            saveMessage = "Failed to save PDF: ${error.message}"
+                            isSuccess = false
+                            println("PDF save failed: ${error.message}")
+                        }
+                    )
+                } catch (e: Exception) {
+                    saveMessage = "Error saving PDF: ${e.message}"
+                    isSuccess = false
+                }
+            }
+        }
+    }
+
+    // Clear message after 5 seconds
+    LaunchedEffect(saveMessage) {
+        saveMessage?.let {
+            kotlinx.coroutines.delay(5000)
+            saveMessage = null
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -538,7 +576,43 @@ fun ReportsScreen(
             )
         )
 
-        // Error message
+        saveMessage?.let { message ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSuccess) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    }
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = message,
+                        color = if (isSuccess) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = { saveMessage = null }
+                    ) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
+
+        // Error message for reports
         if (state.isError) {
             Card(
                 modifier = Modifier
@@ -747,3 +821,5 @@ private fun Double.getDigits(digitsCount: Int): Double {
     val factor = 10.0.pow(digitsCount)
     return kotlin.math.floor(this * factor) / factor
 }
+
+
