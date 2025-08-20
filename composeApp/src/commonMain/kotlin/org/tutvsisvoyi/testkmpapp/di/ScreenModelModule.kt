@@ -3,6 +3,7 @@ package org.tutvsisvoyi.testkmpapp.di
 import org.koin.dsl.module
 import org.tutvsisvoyi.testkmpapp.ui.screens.login.LoginScreenModel
 import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreenModel
+import org.tutvsisvoyi.testkmpapp.ui.screens.reports.ReportsScreenModel
 import org.tutvsisvoyi.testkmpapp.ui.screens.time_entries.TimeEntriesScreenModel
 
 val screenModelModule = module {
@@ -17,6 +18,13 @@ val screenModelModule = module {
         ProfileScreenModel(
             authRepository = get(),
             settings = get()
+        )
+    }
+    factory {
+        ReportsScreenModel(
+            timeEntryRepository = get(),
+            workspaceRepository = get(),
+            projectsRepository = get()
         )
     }
 //    factory { TimerScreenModel(get(), get(), get(), get(), get()) }

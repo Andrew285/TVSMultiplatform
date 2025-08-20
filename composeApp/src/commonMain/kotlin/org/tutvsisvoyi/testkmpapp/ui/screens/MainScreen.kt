@@ -22,6 +22,7 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
+import com.composables.icons.lucide.ChartBar
 import com.composables.icons.lucide.Check
 import com.composables.icons.lucide.House
 import com.composables.icons.lucide.Lucide
@@ -30,6 +31,8 @@ import org.koin.compose.koinInject
 import org.tutvsisvoyi.testkmpapp.ui.screens.login.LoginScreen
 import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreen
 import org.tutvsisvoyi.testkmpapp.ui.screens.profile.ProfileScreenModel
+import org.tutvsisvoyi.testkmpapp.ui.screens.reports.ReportsScreen
+import org.tutvsisvoyi.testkmpapp.ui.screens.reports.ReportsScreenModel
 import org.tutvsisvoyi.testkmpapp.ui.screens.time_entries.TimeEntriesScreen
 import org.tutvsisvoyi.testkmpapp.ui.screens.time_entries.TimeEntriesScreenModel
 
@@ -95,12 +98,18 @@ object ReportsTab : Tab {
         get() = TabOptions(
             index = 1u,
             title = "Reports",
-            icon = rememberVectorPainter(Lucide.Check)
+            icon = rememberVectorPainter(Lucide.ChartBar)
         )
 
     @Composable
     override fun Content() {
-        ReportsContentForTab()
+        val screenModel: ReportsScreenModel = koinInject()
+        val state by screenModel.state.collectAsState()
+
+        ReportsScreen(
+            state = state,
+            onAction = screenModel::handleAction
+        )
     }
 }
 
