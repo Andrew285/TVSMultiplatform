@@ -6,8 +6,11 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.tutvsisvoyi.testkmpapp.data.utils.CalendarUtils
 import org.tutvsisvoyi.testkmpapp.domain.repository.ProjectRepository
 import org.tutvsisvoyi.testkmpapp.domain.repository.TagsRepository
@@ -25,8 +28,6 @@ class TimeEntriesScreenModel(
     private val _state = MutableStateFlow(TimeEntriesState())
     val state: StateFlow<TimeEntriesState> = _state.asStateFlow()
 
-    private var currentStartDate: String? = CalendarUtils.firstDayOfThisMonth().toString()
-    private var currentEndDate: String? = CalendarUtils.today().toString()
     private var timeEntriesJob: Job? = null
 
     init {
@@ -35,55 +36,139 @@ class TimeEntriesScreenModel(
 
     private fun initializeScreen() {
         screenModelScope.launch {
-            // First get the current workspace
+            loadWorkspaces()
+
             val currentWorkspace = workspaceRepository.getCurrentWorkspace()
             if (currentWorkspace != null) {
                 _state.value = _state.value.copy(currentWorkspaceId = currentWorkspace.id)
-                startTimeEntriesCollection() // Start collecting the Flow
+                applyDateFilter(DateFilterType.THIS_MONTH)
                 loadProjects()
                 loadTagsByWorkspace()
             } else {
-                // Try to sync workspaces first
-                workspaceRepository.syncWorkspaces().fold(
-                    onSuccess = { workspaces ->
-                        if (workspaces.isNotEmpty()) {
-                            val firstWorkspace = workspaces.first()
-                            workspaceRepository.setCurrentWorkspace(firstWorkspace)
-                            _state.value = _state.value.copy(currentWorkspaceId = firstWorkspace.id)
-                            startTimeEntriesCollection()
-                        } else {
-                            _state.value = _state.value.copy(
-                                isLoading = false,
-                                errorMessage = "No workspaces found. Please check your account."
-                            )
-                        }
-                    },
-                    onFailure = { error ->
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            errorMessage = "Failed to load workspaces: ${error.message}"
-                        )
-                    }
-                )
+                syncAndSelectFirstWorkspace()
             }
         }
     }
 
-    // FIXED: Single Flow collection that automatically updates UI
+    private suspend fun syncAndSelectFirstWorkspace() {
+        workspaceRepository.syncWorkspaces().fold(
+            onSuccess = { workspaces ->
+                if (workspaces.isNotEmpty()) {
+                    val firstWorkspace = workspaces.first()
+                    workspaceRepository.setCurrentWorkspace(firstWorkspace)
+                    _state.value = _state.value.copy(
+                        workspaces = workspaces,
+                        currentWorkspaceId = firstWorkspace.id
+                    )
+                    applyDateFilter(DateFilterType.THIS_MONTH)
+                    loadProjects()
+                    loadTagsByWorkspace()
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        errorMessage = "No workspaces found. Please check your account."
+                    )
+                }
+            },
+            onFailure = { error ->
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    errorMessage = "Failed to load workspaces: ${error.message}"
+                )
+            }
+        )
+    }
+
+    private fun loadWorkspaces() {
+        screenModelScope.launch {
+            workspaceRepository.getWorkspaces().collect { workspaces ->
+                _state.value = _state.value.copy(workspaces = workspaces)
+            }
+        }
+    }
+
+    private fun selectWorkspace(workspace: org.tutvsisvoyi.testkmpapp.domain.model.Workspace) {
+        screenModelScope.launch {
+            workspaceRepository.setCurrentWorkspace(workspace)
+            _state.value = _state.value.copy(
+                currentWorkspaceId = workspace.id,
+                showWorkspaceSelector = false
+            )
+
+            // Reload data for new workspace
+            applyDateFilter(_state.value.dateFilterType)
+            loadProjects()
+            loadTagsByWorkspace()
+        }
+    }
+
+    private fun applyDateFilter(filterType: DateFilterType) {
+        val today = CalendarUtils.today()
+        val (startDate, endDate) = when (filterType) {
+            DateFilterType.TODAY -> {
+                today.toString() to today.toString()
+            }
+            DateFilterType.YESTERDAY -> {
+                val yesterday = today.minus(1, DateTimeUnit.DAY)
+                yesterday.toString() to yesterday.toString()
+            }
+            DateFilterType.THIS_WEEK -> {
+                val startOfWeek = today.minus(today.dayOfWeek.ordinal, DateTimeUnit.DAY)
+                startOfWeek.toString() to today.toString()
+            }
+            DateFilterType.LAST_WEEK -> {
+                val startOfLastWeek = today.minus(today.dayOfWeek.ordinal + 7, DateTimeUnit.DAY)
+                val endOfLastWeek = startOfLastWeek.plus(6, DateTimeUnit.DAY)
+                startOfLastWeek.toString() to endOfLastWeek.toString()
+            }
+            DateFilterType.THIS_MONTH -> {
+                CalendarUtils.firstDayOfThisMonth().toString() to today.toString()
+            }
+            DateFilterType.LAST_MONTH -> {
+                val firstDayLastMonth = today.minus(1, DateTimeUnit.MONTH)
+                    .let { LocalDate(it.year, it.month, 1) }
+                val lastDayLastMonth = firstDayLastMonth.plus(1, DateTimeUnit.MONTH)
+                    .minus(1, DateTimeUnit.DAY)
+                firstDayLastMonth.toString() to lastDayLastMonth.toString()
+            }
+            DateFilterType.CUSTOM -> {
+                // Keep current custom dates
+                _state.value.selectedStartDate to _state.value.selectedEndDate
+            }
+        }
+
+        _state.value = _state.value.copy(
+            dateFilterType = filterType,
+            selectedStartDate = startDate,
+            selectedEndDate = endDate
+        )
+
+        startTimeEntriesCollection()
+    }
+
+    private fun selectCustomDateRange(startDate: String?, endDate: String?) {
+        _state.value = _state.value.copy(
+            dateFilterType = DateFilterType.CUSTOM,
+            selectedStartDate = startDate,
+            selectedEndDate = endDate
+        )
+        startTimeEntriesCollection()
+    }
+
     private fun startTimeEntriesCollection() {
         val workspaceId = _state.value.currentWorkspaceId ?: return
+        val startDate = _state.value.selectedStartDate
+        val endDate = _state.value.selectedEndDate
 
-        // Cancel previous collection
         timeEntriesJob?.cancel()
-
         timeEntriesJob = screenModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
 
             try {
                 timeEntryRepository.getTimeEntries(
                     workspaceId = workspaceId,
-                    startDate = currentStartDate,
-                    endDate = currentEndDate
+                    startDate = startDate,
+                    endDate = endDate
                 ).collect { entries ->
                     _state.value = _state.value.copy(
                         timeEntries = entries,
@@ -101,20 +186,15 @@ class TimeEntriesScreenModel(
         }
     }
 
-    // FIXED: Simple refresh that just syncs - the Flow will auto-update UI
     private fun refreshTimeEntries() {
         val workspaceId = _state.value.currentWorkspaceId ?: return
 
         screenModelScope.launch {
-            _state.value = _state.value.copy(
-                isRefreshing = true,
-                errorMessage = null
-            )
+            _state.value = _state.value.copy(isRefreshing = true, errorMessage = null)
 
             timeEntryRepository.syncTimeEntries(workspaceId).fold(
                 onSuccess = {
                     _state.value = _state.value.copy(isRefreshing = false)
-                    // The Flow collection will automatically update the UI with new data
                 },
                 onFailure = { error ->
                     _state.value = _state.value.copy(
@@ -126,13 +206,34 @@ class TimeEntriesScreenModel(
         }
     }
 
-    // REMOVED: loadTimeEntries() - replaced with startTimeEntriesCollection()
+    private fun swipeToDelete(timeEntry: org.tutvsisvoyi.testkmpapp.domain.model.TimeEntry) {
+        _state.value = _state.value.copy(
+            showDeleteConfirmation = true,
+            entryToDelete = timeEntry
+        )
+    }
 
-    private fun selectDateRange(startDate: String?, endDate: String?) {
-        currentStartDate = startDate
-        currentEndDate = endDate
-        // Restart collection with new date range
-        startTimeEntriesCollection()
+    private fun deleteTimeEntry(timeEntry: org.tutvsisvoyi.testkmpapp.domain.model.TimeEntry) {
+        val workspaceId = _state.value.currentWorkspaceId ?: return
+
+        screenModelScope.launch {
+            _state.value = _state.value.copy(
+                showDeleteConfirmation = false,
+                entryToDelete = null
+            )
+
+            timeEntryRepository.deleteTimeEntry(workspaceId, timeEntry.id!!).fold(
+                onSuccess = {
+                    // The Flow will automatically update the UI
+                    println("Time entry deleted successfully")
+                },
+                onFailure = { error ->
+                    _state.value = _state.value.copy(
+                        errorMessage = "Failed to delete time entry: ${error.message}"
+                    )
+                }
+            )
+        }
     }
 
     private fun startTimer(
@@ -145,109 +246,51 @@ class TimeEntriesScreenModel(
     ) {
         screenModelScope.launch {
             _state.update { currentState ->
-                currentState.copy(
-                    isSyncing = true,
-                    errorMessage = null
-                )
+                currentState.copy(isSyncing = true, errorMessage = null)
             }
 
             timeEntryRepository.startTimer(
                 description, projectId, taskId, tags, billable, workspaceId
-            )
-                .onSuccess { entry ->
-                    _state.update { currentState ->
-                        currentState.copy(
-                            isSyncing = false,
-                            currentTimeEntry = entry
-                        )
-                    }
-                    // The Flow will automatically update with the new entry from the database
+            ).onSuccess { entry ->
+                _state.update { currentState ->
+                    currentState.copy(isSyncing = false, currentTimeEntry = entry)
                 }
-                .onFailure { error ->
-                    _state.update { currentState ->
-                        currentState.copy(
-                            isSyncing = false,
-                            currentTimeEntry = null,
-                            errorMessage = error.message
-                        )
-                    }
-                    println("Failed to start timer: ${error.message}")
+            }.onFailure { error ->
+                _state.update { currentState ->
+                    currentState.copy(
+                        isSyncing = false,
+                        currentTimeEntry = null,
+                        errorMessage = error.message
+                    )
                 }
+            }
         }
     }
 
-    fun handleAction(action: TimeEntriesAction) {
-        when (action) {
-            is TimeEntriesAction.LoadTimeEntries -> startTimeEntriesCollection()
-            is TimeEntriesAction.RefreshTimeEntries -> refreshTimeEntries()
-            is TimeEntriesAction.SyncTimeEntries -> syncTimeEntries()
-            is TimeEntriesAction.ClearError -> clearError()
-            is TimeEntriesAction.SelectDateRange -> selectDateRange(action.startDate, action.endDate)
-            is TimeEntriesAction.LoadProjects -> loadProjects()
-            is TimeEntriesAction.CreateTimeEntry -> startTimer(
-                description = action.description,
-                projectId = action.projectId,
-                taskId = action.taskId,
-                tags = action.tags,
-                billable = action.billable,
-                workspaceId = action.workspaceId,
-            )
-        }
-    }
-
-    // Rest of your methods remain the same...
     private fun loadProjects() {
         screenModelScope.launch {
-            _state.value = _state.value.copy(
-                isLoading = true,
-                errorMessage = null
+            projectsRepository.getUserProjects().fold(
+                onSuccess = { projects ->
+                    _state.value = _state.value.copy(projects = projects)
+                },
+                onFailure = { error ->
+                    _state.value = _state.value.copy(
+                        errorMessage = "Loading projects failed: ${error.message}"
+                    )
+                }
             )
-
-            try {
-                projectsRepository.getUserProjects().fold(
-                    onSuccess = { response ->
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            errorMessage = null,
-                            projects = response
-                        )
-                    },
-                    onFailure = { error ->
-                        _state.value = _state.value.copy(
-                            isLoading = false,
-                            errorMessage = "Loading projects failed: ${error.message}"
-                        )
-                    }
-                )
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isRefreshing = false,
-                    errorMessage = "Loading projects failed: ${e.message}"
-                )
-            }
         }
     }
 
     private fun loadTagsByWorkspace() {
         screenModelScope.launch {
-            _state.value = _state.value.copy(
-                isLoading = true,
-                isRefreshing = false,
-                errorMessage = null
-            )
-
             val workspaceId = _state.value.currentWorkspaceId ?: return@launch
             tagsRepository.getTagsByWorkspaceId(workspaceId.toInt()).fold(
-                onSuccess = { response ->
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        tags = response
-                    )
+                onSuccess = { tags ->
+                    _state.value = _state.value.copy(tags = tags)
                 },
                 onFailure = { error ->
                     _state.value = _state.value.copy(
-                        isLoading = false,
                         errorMessage = "Failed to load tags: ${error.message}"
                     )
                 }
@@ -259,10 +302,7 @@ class TimeEntriesScreenModel(
         val workspaceId = _state.value.currentWorkspaceId ?: return
 
         screenModelScope.launch {
-            _state.value = _state.value.copy(
-                isSyncing = true,
-                errorMessage = null
-            )
+            _state.value = _state.value.copy(isSyncing = true, errorMessage = null)
 
             timeEntryRepository.syncTimeEntries(workspaceId).fold(
                 onSuccess = {
@@ -280,6 +320,45 @@ class TimeEntriesScreenModel(
 
     private fun clearError() {
         _state.value = _state.value.copy(errorMessage = null)
+    }
+
+    fun handleAction(action: TimeEntriesAction) {
+        when (action) {
+            is TimeEntriesAction.LoadTimeEntries -> startTimeEntriesCollection()
+            is TimeEntriesAction.RefreshTimeEntries -> refreshTimeEntries()
+            is TimeEntriesAction.SyncTimeEntries -> syncTimeEntries()
+            is TimeEntriesAction.ClearError -> clearError()
+            is TimeEntriesAction.LoadProjects -> loadProjects()
+            is TimeEntriesAction.LoadWorkspaces -> loadWorkspaces()
+            is TimeEntriesAction.ShowWorkspaceSelector -> {
+                _state.value = _state.value.copy(showWorkspaceSelector = true)
+            }
+            is TimeEntriesAction.HideWorkspaceSelector -> {
+                _state.value = _state.value.copy(showWorkspaceSelector = false)
+            }
+            is TimeEntriesAction.SelectWorkspace -> selectWorkspace(action.workspace)
+            is TimeEntriesAction.SelectDateRange -> selectCustomDateRange(action.startDate, action.endDate)
+            is TimeEntriesAction.SelectDateFilter -> applyDateFilter(action.filterType)
+            is TimeEntriesAction.SwipeToDelete -> swipeToDelete(action.timeEntry)
+            is TimeEntriesAction.DeleteTimeEntry -> deleteTimeEntry(action.timeEntry)
+            is TimeEntriesAction.ShowDeleteConfirmation -> {
+                _state.value = _state.value.copy(showDeleteConfirmation = true)
+            }
+            is TimeEntriesAction.HideDeleteConfirmation -> {
+                _state.value = _state.value.copy(
+                    showDeleteConfirmation = false,
+                    entryToDelete = null
+                )
+            }
+            is TimeEntriesAction.CreateTimeEntry -> startTimer(
+                description = action.description,
+                projectId = action.projectId,
+                taskId = action.taskId,
+                tags = action.tags,
+                billable = action.billable,
+                workspaceId = action.workspaceId
+            )
+        }
     }
 
     override fun onDispose() {

@@ -19,7 +19,7 @@ data class TogglReportRequest(
     val max_duration_seconds: Int? = null,
     val min_duration_seconds: Int? = null,
     val order_by: String? = null,
-    val order_dir: String? = "desc",
+    val order_dir: String? = "asc",
     val page_size: Int? = null,
     val project_ids: List<Long>? = null,
     val rounding: Int? = null,

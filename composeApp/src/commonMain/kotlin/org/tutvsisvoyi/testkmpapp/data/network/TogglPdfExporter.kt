@@ -27,7 +27,7 @@ data class TogglSummaryReportRequest(
     val max_duration_seconds: Int? = null,
     val min_duration_seconds: Int? = null,
     val order_by: String? = null,
-    val order_dir: String? = "desc",
+    val order_dir: String? = "asc",
     val rounding: Int? = null,
     val rounding_minutes: Int? = null,
     val distinguish_rates: Boolean? = null,
