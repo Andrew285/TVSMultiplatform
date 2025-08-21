@@ -21,6 +21,8 @@ val screenModelModule = module {
     factory {
         ProfileScreenModel(
             authRepository = get(),
+            timeEntryRepository = get(),
+            projectRepository = get(),
             settings = get()
         )
     }

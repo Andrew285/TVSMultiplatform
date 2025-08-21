@@ -6,7 +6,9 @@ data class ProfileState(
     val user: User? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val successMessage: String? = null,
     val isLoggingOut: Boolean = false,
+    val isUpdatingProfile: Boolean = false,
 
     // Settings
     val use24HourFormat: Boolean = false,
@@ -20,7 +22,10 @@ data class ProfileState(
     val showDateFormatDialog: Boolean = false,
     val showDurationFormatDialog: Boolean = false,
     val showFirstDayDialog: Boolean = false,
-    val showLogoutConfirmDialog: Boolean = false
+    val showLogoutConfirmDialog: Boolean = false,
+    val showEditNameDialog: Boolean = false,
+    val showTimezoneDialog: Boolean = false
 ) {
     val isError: Boolean get() = errorMessage != null
+    val hasSuccessMessage: Boolean get() = successMessage != null
 }

@@ -99,20 +99,31 @@ fun TimeTrackerContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    IconButton(
+//                    IconButton(
+//                        onClick = onClose,
+//                        modifier = Modifier
+//                            .size(40.dp)
+//                            .background(
+//                                MaterialTheme.colorScheme.surfaceVariant,
+//                                CircleShape
+//                            )
+//                    ) {
+////                        Icon(
+////                            Lucide.,
+////                            contentDescription = "Close",
+////                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+////                        )
+//
+//                    }
+
+                    Button(
                         onClick = onClose,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                CircleShape
-                            )
-                    ) {
-                        Icon(
-                            Lucide.Cross,
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
                         )
+                    ) {
+                        Text("Cancel", fontWeight = FontWeight.SemiBold)
                     }
 
                     Text(
@@ -338,7 +349,7 @@ fun TimeTrackerContent(
                                         },
                                         trailingIcon = {
                                             Icon(
-                                                Lucide.Cross,
+                                                Lucide.Tag,
                                                 contentDescription = "Remove",
                                                 modifier = Modifier.size(16.dp)
                                             )
