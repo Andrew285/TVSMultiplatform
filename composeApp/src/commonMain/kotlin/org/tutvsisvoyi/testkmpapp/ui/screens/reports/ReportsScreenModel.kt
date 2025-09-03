@@ -91,8 +91,8 @@ class ReportsScreenModel(
             try {
                 timeEntryRepository.getTimeEntries(
                     workspaceId = workspaceId,
-                    startDate = currentStartDate,
-                    endDate = currentEndDate
+                    startDate = null, // currentStartDate
+                    endDate = null, // currentEndDate
                 ).collect { entries ->
                     val chartData = calculateChartData(entries)
                     _state.value = _state.value.copy(

@@ -18,6 +18,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 import org.tutvsisvoyi.testkmpapp.data.network.model.CreateTimeEntryRequest
 import org.tutvsisvoyi.testkmpapp.data.network.model.LoginResponse
@@ -149,21 +150,50 @@ class TogglApiClient(
         return try {
             val client = createAuthenticatedClient()
 
+            // Validate and format dates
+            val formattedStartDate = startDate?.let { validateAndFormatDate(it) }
+            val formattedEndDate = endDate?.let { validateAndFormatDate(it) }
+
             val url = buildString {
                 append("$baseUrl/me/time_entries")
                 val params = mutableListOf<String>()
-                startDate?.let { params.add("start_date=$it") }
-                endDate?.let { params.add("end_date=$it") }
+
+                formattedStartDate?.let { params.add("start_date=$it") }
+                formattedEndDate?.let { params.add("end_date=$it") }
+
                 if (params.isNotEmpty()) {
                     append("?${params.joinToString("&")}")
                 }
             }
 
+            println("Fetching time entries from URL: $url")
+
             val response: List<TogglTimeEntryResponse> = client.get(url).body()
+
+            println("Retrieved ${response.size} time entries")
+            response.forEach { entry ->
+                println("Entry: ${entry.description} - ${entry.start}")
+            }
+
             client.close()
             Result.success(response)
         } catch (e: Exception) {
+            println("Error fetching time entries: ${e.message}")
+            e.printStackTrace()
             Result.failure(e)
+        }
+    }
+
+    // Helper method to validate and format dates for Toggl API
+    private fun validateAndFormatDate(dateString: String): String {
+        return try {
+            // Parse to validate format
+            val localDate = LocalDate.parse(dateString)
+            // Return in YYYY-MM-DD format (same as input if valid)
+            localDate.toString()
+        } catch (e: Exception) {
+            println("Invalid date format: $dateString. Expected YYYY-MM-DD")
+            throw IllegalArgumentException("Invalid date format: $dateString. Expected YYYY-MM-DD", e)
         }
     }
 

@@ -139,8 +139,8 @@ class TimeEntriesScreenModel(
 
         _state.value = _state.value.copy(
             dateFilterType = filterType,
-            selectedStartDate = startDate,
-            selectedEndDate = endDate
+            selectedStartDate = null, // selectedStartDate
+            selectedEndDate = null // selectedEndDate
         )
 
         startTimeEntriesCollection()
